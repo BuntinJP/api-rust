@@ -1,0 +1,12 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		}
+    ],
+    "settings": {
+        "rust-analyzer.linkedProjects": [
+            "/Users/g-2024/gitRepos/api-rust/Cargo.toml"
+        ]
+    }
+}
