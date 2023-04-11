@@ -1,1 +1,4 @@
+
+version_image_url="https://cdn.discordapp.com/attachments/1048617033232822303/1095455538969591829/suse.png"
 services = ["httpd","mysqld","nginx","sshd"]
+domains = ["example.com","example.net"]

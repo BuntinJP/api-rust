@@ -29,6 +29,8 @@ extern crate toml;
 #[derive(Debug, Deserialize)]
 struct Config {
     services: Vec<String>,
+    version_image_url: String,
+    domains:Vec<String>,
 }
 
 impl Responder for Ticket {
