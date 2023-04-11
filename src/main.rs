@@ -1,15 +1,30 @@
-use actix_web::body::BoxBody;
+use std::fs;
+use std::io::{BufReader, Read};
+//use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use std::process::Command;
+extern crate serde_derive;
+extern crate toml;
+
+
+#[derive(Debug, Deserialize)]
+struct Config {
+    services: Vec<String>,
+}
+
+/* use actix_web::body::BoxBody;
+use actix_web::services;
 use actix_web::http::header::ContentType;
 use actix_web::http::StatusCode;
 use actix_web::{
-    delete, get, post, put, web, App, HttpRequest, HttpResponse, HttpServer, Responder,
-    ResponseError,
+    get, post, web, App, HttpRequest, HttpResponse, HttpServer, Responder, ResponseError,
 };
 
-use serde::{Deserialize, Serialize};
+
 
 use std::fmt::Display;
 use std::sync::Mutex;
+
 
 #[derive(Serialize, Deserialize)]
 struct Ticket {
@@ -17,7 +32,6 @@ struct Ticket {
     author: String,
 }
 
-// Implement Responder Trait for Ticket
 impl Responder for Ticket {
     type Body = BoxBody;
     fn respond_to(self, _req: &HttpRequest) -> HttpResponse<Self::Body> {
@@ -28,6 +42,7 @@ impl Responder for Ticket {
             .body(res_body)
     }
 }
+// toml file struction
 
 #[derive(Debug, Serialize)]
 struct ErrNoId {
@@ -103,61 +118,8 @@ async fn get_ticket(id: web::Path<u32>, data: web::Data<AppState>) -> Result<Tic
     }
 }
 
-// Update the ticket with the corresponding id
-#[put("/tickets/{id}")]
-async fn update_ticket(
-    id: web::Path<u32>,
-    req: web::Json<Ticket>,
-    data: web::Data<AppState>,
-) -> Result<HttpResponse, ErrNoId> {
-    let ticket_id: u32 = *id;
-    let new_ticket = Ticket {
-        id: req.id,
-        author: String::from(&req.author),
-    };
-    let mut tickets = data.tickets.lock().unwrap();
-    let id_index = tickets.iter().position(|x| x.id == ticket_id);
-    match id_index {
-        Some(id) => {
-            let response = serde_json::to_string(&new_ticket).unwrap();
-            tickets[id] = new_ticket;
-            Ok(HttpResponse::Ok()
-                .content_type(ContentType::json())
-                .body(response))
-        }
-        None => {
-            let response = ErrNoId {
-                id: ticket_id,
-                err: String::from("ticket not found"),
-            };
-            Err(response)
-        }
-    }
-}
-
-// Delete the ticket with the corresponding id
-#[delete("/tickets/{id}")]
-async fn delete_ticket(id: web::Path<u32>, data: web::Data<AppState>) -> Result<Ticket, ErrNoId> {
-    let ticket_id: u32 = *id;
-    let mut tickets = data.tickets.lock().unwrap();
-    let id_index = tickets.iter().position(|x| x.id == ticket_id);
-    match id_index {
-        Some(id) => {
-            let deleted_ticket = tickets.remove(id);
-            Ok(deleted_ticket)
-        }
-        None => {
-            let response = ErrNoId {
-                id: ticket_id,
-                err: String::from("ticket not found"),
-            };
-            Err(response)
-        }
-    }
-}
-
 #[actix_web::main]
-async fn main() -> std::io::Result<()> {
+async fn seMain() -> std::io::Result<()> {
     let app_state = web::Data::new(AppState {
         tickets: Mutex::new(vec![
             Ticket {
@@ -176,10 +138,45 @@ async fn main() -> std::io::Result<()> {
             .service(post_ticket)
             .service(get_ticket)
             .service(get_tickets)
-            .service(update_ticket)
-            .service(delete_ticket)
     })
     .bind(("127.0.0.1", 8080))?
     .run()
     .await
+} */
+
+fn systemctl_research(service: String) -> String {
+    let output = Command::new("systemctl")
+        .arg("status")
+        .arg(service)
+        .output()
+        .expect("failed to execute process");
+    let output = String::from_utf8_lossy(&output.stdout);
+    let output = output.to_string();
+    output
+}
+
+fn read_file(path: String) -> Result<String, String> {
+    let mut file_content = String::new();
+    let mut fr = fs::File::open(path)
+        .map(|f| BufReader::new(f))
+        .map_err(|e| e.to_string())?;
+    fr.read_to_string(&mut file_content)
+        .map_err(|e| e.to_string())?;
+    Ok(file_content)
+}
+
+fn main() {
+    let s = match read_file("./config.toml".to_owned()) {
+        Ok(s) => s,
+        Err(e) => panic!("fail to read file: {}", e),
+    };
+    let config: Result<Config, toml::de::Error> = toml::from_str(&s);
+    let target = match config {
+        Ok(p) => p.services,
+        Err(e) => panic!("fail to parse toml: {}", e),
+    };
+    for service in target {
+        let output = systemctl_research(service);
+        println!("{}", output);
+    }
 }
