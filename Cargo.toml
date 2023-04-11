@@ -8,7 +8,9 @@ authors = ["buntin"]
 
 [dependencies]
 actix-web = "4"
+actix-rt = "2.2"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_derive = "1.0"
 toml = "0.4"
+tera = "1.18.1"

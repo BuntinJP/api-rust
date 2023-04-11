@@ -1,35 +1,34 @@
-use std::fs;
-use std::io::{BufReader, Read};
-//use serde::{Deserialize, Serialize};
-use serde::Deserialize;
-use std::process::Command;
-extern crate serde_derive;
-extern crate toml;
-
-
-#[derive(Debug, Deserialize)]
-struct Config {
-    services: Vec<String>,
-}
-
-/* use actix_web::body::BoxBody;
-use actix_web::services;
+//command line modules
+mod commands;
+use commands::{read_toml, systemctl_research};
+//serde
+use serde::{Deserialize, Serialize};
+//actix
+use actix_web::body::BoxBody;
 use actix_web::http::header::ContentType;
 use actix_web::http::StatusCode;
 use actix_web::{
     get, post, web, App, HttpRequest, HttpResponse, HttpServer, Responder, ResponseError,
 };
+//tera
+use tera::{Context, Tera};
 
-
-
+//std
 use std::fmt::Display;
 use std::sync::Mutex;
 
-
+//type and struct
 #[derive(Serialize, Deserialize)]
 struct Ticket {
     id: u32,
     author: String,
+}
+extern crate serde_derive;
+extern crate toml;
+
+#[derive(Debug, Deserialize)]
+struct Config {
+    services: Vec<String>,
 }
 
 impl Responder for Ticket {
@@ -117,9 +116,17 @@ async fn get_ticket(id: web::Path<u32>, data: web::Data<AppState>) -> Result<Tic
         Err(response)
     }
 }
+//welcome page
+async fn index(tera: web::Data<Tera>) -> impl Responder {
+    let mut context = Context::new();
+    context.insert("name", "Buntin-Catalina");
+    let rendered = tera.render("index.html", &context).unwrap();
+    HttpResponse::Ok().content_type("text/html").body(rendered)
+}
 
 #[actix_web::main]
-async fn seMain() -> std::io::Result<()> {
+async fn main() -> std::io::Result<()> {
+    let tera = Tera::new("src/templates/**/*").unwrap();
     let app_state = web::Data::new(AppState {
         tickets: Mutex::new(vec![
             Ticket {
@@ -135,48 +142,13 @@ async fn seMain() -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .app_data(app_state.clone())
+            .app_data(web::Data::new(tera.clone()))
             .service(post_ticket)
             .service(get_ticket)
             .service(get_tickets)
+            .route("/",web::get().to(index))
     })
     .bind(("127.0.0.1", 8080))?
     .run()
     .await
-} */
-
-fn systemctl_research(service: String) -> String {
-    let output = Command::new("systemctl")
-        .arg("status")
-        .arg(service)
-        .output()
-        .expect("failed to execute process");
-    let output = String::from_utf8_lossy(&output.stdout);
-    let output = output.to_string();
-    output
-}
-
-fn read_file(path: String) -> Result<String, String> {
-    let mut file_content = String::new();
-    let mut fr = fs::File::open(path)
-        .map(|f| BufReader::new(f))
-        .map_err(|e| e.to_string())?;
-    fr.read_to_string(&mut file_content)
-        .map_err(|e| e.to_string())?;
-    Ok(file_content)
-}
-
-fn main() {
-    let s = match read_file("./config.toml".to_owned()) {
-        Ok(s) => s,
-        Err(e) => panic!("fail to read file: {}", e),
-    };
-    let config: Result<Config, toml::de::Error> = toml::from_str(&s);
-    let target = match config {
-        Ok(p) => p.services,
-        Err(e) => panic!("fail to parse toml: {}", e),
-    };
-    for service in target {
-        let output = systemctl_research(service);
-        println!("{}", output);
-    }
 }
