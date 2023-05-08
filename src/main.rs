@@ -30,7 +30,7 @@ extern crate toml;
 struct Config {
     services: Vec<String>,
     version_image_url: String,
-    domains:Vec<String>,
+    domains: Vec<String>,
 }
 
 impl Responder for Ticket {
@@ -148,7 +148,7 @@ async fn main() -> std::io::Result<()> {
             .service(post_ticket)
             .service(get_ticket)
             .service(get_tickets)
-            .route("/",web::get().to(index))
+            .route("/", web::get().to(index))
     })
     .bind(("127.0.0.1", 8080))?
     .run()
